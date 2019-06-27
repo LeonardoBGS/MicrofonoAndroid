@@ -5,7 +5,9 @@
 package com.mycompany.com.myapplication;
 
 import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.media.MicrophoneInfo;
@@ -71,6 +73,16 @@ public class MainActivity extends AppCompatActivity {
         }
         else{
             Log.d(TAG,"SDK Version muy baja");
+
+            AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+            //https://stackoverflow.com/questions/44949280/how-can-i-get-the-list-of-microphones-on-android-api-17-usb-connected-mics
+            //API 23 FUCK! 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                AudioDeviceInfo[] adi = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+                Log.d(TAG,"LIST : "+adi.length);
+            }
+
             return "Se detecto microfono - SDK Version muy baja";
         }
     }
