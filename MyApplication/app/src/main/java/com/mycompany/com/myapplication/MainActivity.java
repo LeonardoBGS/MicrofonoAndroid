@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 try {
                     btn.setBackgroundColor( ( (colorBtn++)%2==0)? Color.GREEN: Color.YELLOW );
-                    txtBox.setText(getMicrofonosActivos());
+                    txtBox.setText(isMicroInUse()?"Micro en uso":"Micro no esta en uso");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -62,23 +62,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public String getMicrofonosActivos() throws IOException {
-        Log.d(TAG,"getMicrofonosActivos");
+    public boolean isMicroInUse() throws IOException {
         if(!hasMicrophone())
-            return "No hay microfono";
-        AudioRecord AR = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                RECORDER_SAMPLERATE, RECORDER_CHANNELS,
-                RECORDER_AUDIO_ENCODING, BufferElements2Rec * BytesPerElement);
+            return false;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             List<AudioRecordingConfiguration> listaMicrosActivos = audioManager.getActiveRecordingConfigurations ();
 
-            return "# microfonos activos: "+listaMicrosActivos.size();
+            return (listaMicrosActivos.size()>0)?true:false;
         }
         else{
-            Log.d(TAG,"API level < 24");
-
             MediaRecorder mRecorder;
             mRecorder = new MediaRecorder();
             mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -100,25 +94,22 @@ public class MainActivity extends AppCompatActivity {
             try {
                 mRecorder.prepare();
                 mRecorder.start();
-                Log.e("Stop recording","TRUE");
-                Log.d(TAG,"a parar");
                 try{
                     mRecorder.stop();
+                    mRecorder.release();
                 }catch(RuntimeException stopException){
-                    Log.e("Voice Recorder", "stop() failed "+stopException.getMessage());
+                    //android detecta que hay un stop despues de start
+                    //lanza exception en automatico
+                    //error: MediaRecorder: stop failed: -1007
                 }
-                Log.d(TAG,"a release");
-                mRecorder.release();
             } catch (IOException e) {
-
-                Log.e("Voice Recorder", "prepare() failed "+e.getMessage());
             }catch (Exception e) {
+                //si el micro esta en uso lanza la exception
+                //error: MediaRecorder: start failed: -38
                 isMicroOcupado=true;
-                Log.d(TAG,"error e:");
             }
-
             mRecorder = null;
-            return ""+isMicroOcupado;
+            return isMicroOcupado;
         }
     }
 
@@ -129,30 +120,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean hasMicrophone() {
-
         return getPackageManager().hasSystemFeature(
                 PackageManager.FEATURE_MICROPHONE);
     }
-
-    /*
-    private void printMicrophoneInfo(MicrophoneInfo microphone) {
-        Log.i(TAG, "deviceId:" + microphone.getDescription());
-        Log.i(TAG, "portId:" + microphone.getId());
-        Log.i(TAG, "type:" + microphone.getType());
-        Log.i(TAG, "address:" + microphone.getAddress());
-        Log.i(TAG, "deviceLocation:" + microphone.getLocation());
-        Log.i(TAG, "deviceGroup:" + microphone.getGroup()
-                + " index:" + microphone.getIndexInTheGroup());
-        MicrophoneInfo.Coordinate3F position = microphone.getPosition();
-        Log.i(TAG, "position:" + position.x + "," + position.y + "," + position.z);
-        MicrophoneInfo.Coordinate3F orientation = microphone.getOrientation();
-        Log.i(TAG, "orientation:" + orientation.x + "," + orientation.y + "," + orientation.z);
-        Log.i(TAG, "frequencyResponse:" + microphone.getFrequencyResponse());
-        Log.i(TAG, "channelMapping:" + microphone.getChannelMapping());
-        Log.i(TAG, "sensitivity:" + microphone.getSensitivity());
-        Log.i(TAG, "max spl:" + microphone.getMaxSpl());
-        Log.i(TAG, "min spl:" + microphone.getMinSpl());
-        Log.i(TAG, "directionality:" + microphone.getDirectionality());
-        Log.i(TAG, "******");
-    }*/
 }
