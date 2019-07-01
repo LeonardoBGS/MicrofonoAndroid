@@ -4,6 +4,8 @@
 //https://developer.android.com/reference/android/media/AudioRecord.html#getActiveMicrophones()
 package com.mycompany.com.myapplication;
 
+import android.app.ActivityManager;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.AudioDeviceInfo;
@@ -29,8 +31,14 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MyApp";
-    Button btn;
-    TextView txtBox;
+    Button btn_isMicroInUse;
+    TextView tv_isMicroInUse;
+    Button btn_isMicroMute;
+    TextView tv_isMicroMute;
+    Button btn_isInModeCall;
+    TextView tv_isInModeCall;
+    Button btn_estaMicDisponible;
+    TextView tv_estaMicDisponible;
 
     private static final int RECORDER_SAMPLERATE = 8000;
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
@@ -45,34 +53,68 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        btn = findViewById(R.id.button);
-        txtBox = findViewById(R.id.textView);
+        btn_estaMicDisponible = findViewById(R.id.btn_estaMicDisponible);
+        tv_estaMicDisponible = findViewById(R.id.tv_estaMicDisponible);
 
-        btn.setOnClickListener(new View.OnClickListener() {
+        btn_isMicroInUse= findViewById(R.id.btn_isMicroInUse);
+        tv_isMicroInUse = findViewById(R.id.tv_isMicroInUse);
+
+        btn_isInModeCall= findViewById(R.id.btn_isInModeCall);
+        tv_isInModeCall= findViewById(R.id.tv_isInModeCall);
+
+        btn_isMicroMute = findViewById(R.id.btn_isMicroMute);
+        tv_isMicroMute= findViewById(R.id.tv_isMicroMute);
+
+        btn_estaMicDisponible.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                btn_estaMicDisponible.setBackgroundColor(((colorBtn++) % 2 == 0) ? Color.GREEN : Color.YELLOW);
+                tv_estaMicDisponible.setText( ""+estaMicDisponible() );
+
+            }
+        });
+
+        btn_isMicroInUse.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                btn_isMicroInUse.setBackgroundColor(((colorBtn++) % 2 == 0) ? Color.GREEN : Color.YELLOW);
                 try {
-                    btn.setBackgroundColor( ( (colorBtn++)%2==0)? Color.GREEN: Color.YELLOW );
-                    txtBox.setText(isMicroInUse()?"Micro en uso":"Micro no esta en uso");
+                    tv_isMicroInUse.setText( ""+isMicroInUse() );
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                iterateInstalledApps();
+            }
+        });
+
+        btn_isMicroMute.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                btn_isMicroMute.setBackgroundColor(((colorBtn++) % 2 == 0) ? Color.GREEN : Color.YELLOW);
+                tv_isMicroMute.setText( ""+isMicroMute() );
+            }
+        });
+
+        btn_isInModeCall.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                btn_isInModeCall.setBackgroundColor(((colorBtn++) % 2 == 0) ? Color.GREEN : Color.YELLOW);
+                tv_isInModeCall.setText( ""+isModeInCall() );
             }
         });
     }
 
 
-    public boolean isMicroInUse() throws IOException {
-        if(!hasMicrophone())
+    private boolean isMicroInUse() throws IOException {
+        if (!hasMicrophone())
             return false;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            List<AudioRecordingConfiguration> listaMicrosActivos = audioManager.getActiveRecordingConfigurations ();
+            List<AudioRecordingConfiguration> listaMicrosActivos = audioManager.getActiveRecordingConfigurations();
 
-            return (listaMicrosActivos.size()>0)?true:false;
-        }
-        else{
+            return (listaMicrosActivos.size() > 0) ? true : false;
+        } else {
             MediaRecorder mRecorder;
             mRecorder = new MediaRecorder();
             mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -84,29 +126,32 @@ public class MainActivity extends AppCompatActivity {
                 mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
                 mRecorder.setAudioEncodingBitRate(64000);
             }
+
             mRecorder.setAudioSamplingRate(16000);
             File mOutputFile = getOutputFile();
             mOutputFile.getParentFile().mkdirs();
             mRecorder.setOutputFile(mOutputFile.getAbsolutePath());
 
-            boolean isMicroOcupado=false;
+
+
+            boolean isMicroOcupado = false;
 
             try {
                 mRecorder.prepare();
                 mRecorder.start();
-                try{
+                try {
                     mRecorder.stop();
                     mRecorder.release();
-                }catch(RuntimeException stopException){
+                } catch (RuntimeException stopException) {
                     //android detecta que hay un stop despues de start
                     //lanza exception en automatico
                     //error: MediaRecorder: stop failed: -1007
                 }
             } catch (IOException e) {
-            }catch (Exception e) {
+            } catch (Exception e) {
                 //si el micro esta en uso lanza la exception
                 //error: MediaRecorder: start failed: -38
-                isMicroOcupado=true;
+                isMicroOcupado = true;
             }
             mRecorder = null;
             return isMicroOcupado;
@@ -124,72 +169,12 @@ public class MainActivity extends AppCompatActivity {
                 PackageManager.FEATURE_MICROPHONE);
     }
 
-
-    /*
-    public boolean isMicroInUse() throws IOException {
-        if(!hasMicrophone())
-            Log.d(TAG,"no hay microfono");
-
+    private boolean isMicroMute() {
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        Log.d(TAG, "micro mute?: "+audioManager.isMicrophoneMute());
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            List<AudioRecordingConfiguration> listaMicrosActivos = audioManager.getActiveRecordingConfigurations ();
-
-            return (listaMicrosActivos.size()>0)?true:false;
-        }
-        else{
-            MediaRecorder mRecorder;
-            mRecorder = new MediaRecorder();
-            mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.HE_AAC);
-                mRecorder.setAudioEncodingBitRate(48000);
-            } else {
-                mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-                mRecorder.setAudioEncodingBitRate(64000);
-            }
-            mRecorder.setAudioSamplingRate(16000);
-            File mOutputFile = getOutputFile();
-            mOutputFile.getParentFile().mkdirs();
-            mRecorder.setOutputFile(mOutputFile.getAbsolutePath());
-
-            boolean isMicroOcupado=false;
-
-            try {
-                mRecorder.prepare();
-                mRecorder.start();
-                try{
-                    mRecorder.stop();
-                    mRecorder.release();
-                }catch(RuntimeException stopException){
-                    //android detecta que hay un stop despues de start
-                    //lanza exception en automatico
-                    //error: MediaRecorder: stop failed: -1007
-                }
-            } catch (IOException e) {
-            }catch (Exception e) {
-                //si el micro esta en uso lanza la exception
-                //error: MediaRecorder: start failed: -38
-                isMicroOcupado=true;
-            }
-            mRecorder = null;
-            return isMicroOcupado;
-        }
+        Log.d(TAG, "micro mute?: " + audioManager.isMicrophoneMute());
+        return audioManager.isMicrophoneMute();
     }
 
-    private File getOutputFile() {
-        return new File(Environment.getExternalStorageDirectory().getAbsolutePath()
-                + "/Voice Recorder/RECORDING_"
-                + ".m4a");
-    }
-
-    private boolean hasMicrophone() {
-        return getPackageManager().hasSystemFeature(
-                PackageManager.FEATURE_MICROPHONE);
-    }
 
     private void iterateInstalledApps()
     {
@@ -203,36 +188,70 @@ public class MainActivity extends AppCompatActivity {
             {
                 for(int i=0;i<reqPermission.length;i++)
                 {
-                    if (((String)reqPermission[i]).equals("android.permission.RECORD_AUDIO"))
+                    if (((String)reqPermission[i]).equals("android.permission.RECORD_AUDIO") || ((String)reqPermission[i]).equals("android.permission.CALL_PHONE") )
                     {
-                        Log.d(TAG,pInfo.toString());
-                        break;
+                        Log.d("iia",pInfo.packageName );
+                        Log.d("iia",reqPermission[i]);
+                        Log.d("iia", ""+isAppOnForeground(pInfo.packageName));
                     }
                 }
             }
         }
     }
 
-    public void isMicroActive1(){
+    //checar si una app esta en background
+    private boolean isAppOnForeground(String appName) {
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> appProcesses = activityManager.getRunningAppProcesses();
+        if (appProcesses == null) {
+            return false;
+        }
+        for (ActivityManager.RunningAppProcessInfo appProcess : appProcesses) {
+            if (appProcess.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND ){//&& appProcess.processName.equals(appName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isModeInCall(){
         AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         if (am.getMode() == AudioManager.MODE_NORMAL){
             Log.d(TAG, "normal mode");
         }
         else if(am.getMode() == AudioManager.MODE_IN_CALL){
             Log.d(TAG, "call mode");
+            return true;
         }
         else if(am.getMode() == AudioManager.MODE_IN_COMMUNICATION){
             Log.d(TAG, "voIP mode");
         }
+
         else
             Log.d(TAG, "otro mode");
+        return false;
     }
 
-
-    /*
-    MODE_IN_CALL solo funciona cuando se llama desde agente a viajero
-
-
-
-     */
+    private boolean estaMicDisponible(){
+        Boolean disponible= true;
+        AudioRecord recorder =
+                new AudioRecord(MediaRecorder.AudioSource.MIC, 44100,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_DEFAULT, 44100);
+        try{
+            if(recorder.getRecordingState() != AudioRecord.RECORDSTATE_STOPPED ){
+                disponible= false;
+            }
+            recorder.startRecording();
+            if(recorder.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING){
+                recorder.stop();
+                disponible = false;
+            }
+            recorder.stop();
+        } finally{
+            recorder.release();
+            recorder = null;
+        }
+        return disponible;
+    }
 }
